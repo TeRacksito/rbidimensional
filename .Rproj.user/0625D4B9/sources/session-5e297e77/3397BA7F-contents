@@ -1,0 +1,860 @@
+---
+title: "Práctica 5: Estadística Descriptiva Bidimensional"
+subtitle: "Grado en Ingeniería Informática"
+author: "Isabel Fuentes Santos y Carmen Elvira Ramos Domínguez"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    toc: true                # Activa la tabla de contenidos
+    toc_depth: 5             # Niveles H1 a H5
+    toc_float:
+      collapsed: true       # No muestra el índice desplegado
+      smooth_scroll: true    # Desplazamiento suave
+    number_sections: true    # Numera secciones (1, 1.1, etc.)
+    fig_caption: true
+    theme: flatly            # Tema visual
+    highlight: tango         # Resaltado de código
+    code_folding: show       # Muestra/oculta código
+    lang: es                 # usar el lenguaje español
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{=html}
+<style>
+/* Captions de figuras (ggplot y R base) */
+.figure .caption, 
+figcaption, 
+p.caption {
+  font-weight: bold !important;  /* Aplica negrita */
+  font-size: 1.25em !important;  /* Aumenta el tamaño del texto */
+  color: #333333 !important;     /* Color del texto */
+  text-align: center !important; /* Centra el texto */
+}
+
+/* Captions de tablas (por si también quieres darles el mismo formato) */
+caption {
+  font-weight: bold !important;
+  font-size: 1.25em !important;
+  color: #333333 !important;
+  text-align: center !important;
+}
+
+table, table.table, .main-container table {
+  border-collapse: collapse!important;
+  width: auto !important;
+  margin-left: auto !important;       /* Centrado horizontal */
+  margin-right: auto !important;      /* Centrado horizontal */
+  margin-bottom: 1rem !important;
+  font-size: 0.85em !important; /* Reduce el tamaño del texto */
+  border: 1px solid #dddddd !important; /* Borde exterior de la tabla */
+}
+
+table th, table td,
+.main-container table th, .main-container table td {
+  border: 1px solid #dddddd!important;
+  text-align: center!important;
+  padding: 8px !important;;
+}
+
+tr:nth-child(even) {
+  background-color: #E8DAEF; /* Filas alternas en morado claro */
+}
+
+th {
+  background-color: #5C068C !important;; /* Color de cabecera */
+  color: white !important;;
+}
+</style>
+```
+
+```{r setup, include=FALSE}
+# Configuración global de los bloques de código (knitr)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 8,
+  fig.height = 5,
+  fig.align = "center"
+)
+
+# Carga de librerías de edición
+library(knitr)
+library(kableExtra)
+
+```
+
+# Introducción y Objetivos
+
+En esta práctica analizamos desde el punto de vista descriptivo, las
+relaciones entre dos variables. Distinguiremos si las variables son
+cuantitativas o cualitativas (atributos).
+
+Se tratarán los siguientes puntos:
+
+- Organización y presentación de datos mediante **tablas de frecuencias
+  bidimensionales** (para variables cualitativas o cuantitativas
+  discretas con pocos valores *Tablas de Contingencia*.
+
+- **Representaciones gráficas** de distribuciones bidimensionales para
+  variables categóricas y variables continuas agrupadas por un factor
+  usando R básico: `graphics`, y `DescTootls`.
+
+- Contrastes de Independencia entre variables.
+
+- Resolución de los **ejercicios propuestos** de prácticas.
+
+# Conjunto de Datos
+
+En principio usaremos para el análisis, un conjunto de datos del ámbito
+de la Informática recogidos en el fichero **Training.RData**, más
+concretamente, relacionado con el mundo del **entrenamiento de los
+Modelos de Inteligencia Artificial**. Nuestro conjunto datos contiene
+1000 entrenamientos de diversos modelos de IA . En realidad de distintas
+configuraciones de modelos, como por ejemplo con una determinada
+arquitectura (*Transformer* o *CNN*), un conjunto de hiperparámetros
+(diferentes tasas de aprendizaje, número de capas, etc.) y un
+determinado entorno de hardware (entrenado en una *Nvidia A100* vs. una
+*TPU-v4*). En este sentido, el fichero recoge la información de 15
+variables cuya descripción se muestra en el fichero ***RMarkdown:
+AI_Model_Training.Rmd***.
+
+Cargamos el fichero Training.RData como se indica a continuación.
+
+```{r}
+load("Training.Rdata")
+attach(Training) 
+```
+
+y las librerias que vamos a utilizar:
+
+```{r}
+
+library(DescTools) ## descriptiva
+library(lattice) ## histograma condicionado
+library(e1071)
+
+```
+
+# Análisis de Dos Variables Categóricas
+
+## Distribuciones Conjuntas
+
+### Tabla de Contingencia
+
+Si se dispone de dos o más variables estadísticas tanto sean
+cualitativas como cuantitativas discretas con pocos valores necesitamos
+de una tabla de frecuencias bidimensional, **tabla de contingencia,**
+que recoja las frecuencias absolutas o relativas conjuntas de los pares
+de datos observados. En el caso de variables continuas o discretas con
+muchos valores, podemos contruir la tabla tras haber agrupado las
+variables en intervalos o clases, es decir tras transformar cada
+variable en una variable categórica ordinal.
+
+Para hacer estas tablas usaremos las funciones `table()`, que nos da las
+distribuciones absolutas y `proportions()`, para frecuencias relativas,
+de la librería `base`.
+
+Antes de empezar, indicar que en la ayuda de
+`proportions(x, margin=NULL)` podemos ver que tiene dos parámetros:
+
+- *x*: una tabla, obtenida aplicando la función `table()`.
+
+- *margin*: la variable con respecto a la que condicionamos. El valor
+  por defecto *margin = NULL* devuelve la distribución conjunta, *margin
+  = 1 ó 2* condiciona respecto a filas o columnas, En lugar de la
+  posición (1 ó 2) podemos poner el nombre de la variable directamente.
+
+Veamos entonces la distribución conjunta de las variables ***arch***
+"**arquitectura del modelo** " y ***vram_level*** "**nivel del consumo
+de memoria gráfica"**.
+
+**Frecuencias absolutas**
+
+```{r, tabla-contingencia-abs}
+# -------------------------------------------------------------
+#  Tabla de Frecuencias Absolutas Conjuntas y Marginales
+# -------------------------------------------------------------
+# Calcula frecuencias absolutas conjuntas
+tabla1<-table(arch, vram_level)  
+
+# Añade marginales
+tabla1_totales <- addmargins(tabla1)
+
+
+
+####    EDITAMOS LA TABLA   ####
+
+
+# Asigna etiquetas con notación LaTeX
+colnames(tabla1_totales)[ncol(tabla1_totales)] <- "$n_{x_{i}}$"
+rownames(tabla1_totales)[nrow(tabla1_totales)] <- "$n_{y_{j}}$"
+
+# Convierte a data.frame haciendo explícita la primera columna
+df_tabla1 <- data.frame(
+  `Arquitectura / Memoria VRAM` = rownames(tabla1_totales),
+  as.data.frame.matrix(tabla1_totales),
+  check.names = FALSE,
+  stringsAsFactors = FALSE
+)
+
+# Imprime tabla formateada
+kbl(df_tabla1, 
+    caption =" Tabla de Contingencia: Frecuencias Absolutas Conjuntas ($n_{ij}$)",
+    align = "c",
+    escape = FALSE, 
+    row.names = FALSE) %>% # Quitamos los row.names automáticos de R
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), 
+                full_width = FALSE, 
+                position = "center") %>%
+  row_spec(0, background = "#5C068C", color = "white", bold = TRUE) %>%
+  column_spec(1, background = "#5C068C", color = "white", bold = TRUE) 
+
+
+```
+
+De la Tabla \@ref(tab:tabla-contingencia-abs) se desprende que existe
+cierta relación entre ambos atributos: arquitectura del modelo y niveles
+de memoria gráfica reservada. Se destaca que las arquitecturas
+recurrentes como LSTM y convolucionales livianas como CNN operan sobre
+entornos de memoria a menor escala (bajo o medio), mientras que las
+arquitecturas de aprendizaje profundo complejo (Transformer y ResNet)
+necesitan de tarjetas gráficas con capacidades de VRAM de rango medio a
+crítico.
+
+También se puede apreciar la información en porcentaje usando las
+frecuencias relativas conjuntas $f_{ij}$ ya que multiplicadas por 100
+nos dan los porcentajes de las combinaciones de categrorías de ambos
+atributos.
+
+**Frecuencias relativas**
+
+```{r, tabla-contingencia-rel}
+
+# -------------------------------------------------------------
+#  Tabla de Frecuencias Relativas Conjuntas y Marginales
+# -------------------------------------------------------------
+
+# Calcula las frecuencias relativas conjuntas aplicando propotions( ) a la tabla de frecuencias absolutas. 
+tabla2<-proportions(tabla1) # También se puede usar la función prop.table (nombre antiguo de la función)
+
+# Añade las marginales
+prop_conjunta <- addmargins(tabla2)
+
+# Redondea los decimales a 3 
+prop_conjunta <- round(prop_conjunta, digits = 3)
+
+
+####      EDITAMOS LA TABLA     ####
+
+# Asigna etiquetas con notación LaTeX
+colnames(prop_conjunta)[ncol(prop_conjunta)] <- "$f_{x_i}$"
+rownames(prop_conjunta)[nrow(prop_conjunta)] <- "$f_{y_j}$"
+
+# Convierte a data.frame haciendo explícita la primera columna
+df_tabla2 <- data.frame(
+  `Arquitectura / Memoria VRAM` = rownames(prop_conjunta),
+  as.data.frame.matrix(prop_conjunta),
+  check.names = FALSE,
+  stringsAsFactors = FALSE
+)
+
+# Imprime tabla formateada
+kbl(df_tabla2, 
+    caption =" Tabla de Contingencia: Frecuencias Relativas Conjuntas ($f_{ij}$)",
+    align = "c",
+    escape = FALSE, 
+    row.names = FALSE) %>% # Quitamos los row.names automáticos de R
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), 
+                full_width = FALSE, 
+                position = "center") %>%
+  row_spec(0, background = "#5C068C", color = "white", bold = TRUE) %>%
+  column_spec(1, background = "#5C068C", color = "white", bold = TRUE) 
+  
+```
+
+Como se refleja en la Tabla \@ref(tab:tabla-contingencia-rel), el 21.9%
+de los modelos tienen una arquitectura Transformer y presentan un nivel
+crítico de memoria VRAM, siendo el más exigente.
+
+### Representación gráfica
+
+**Diagramas de sectores o de acordes**
+
+Para representar la distribución conjunta de dos atributos o variables
+discretas con pocos valores se puede utilizar un **gráfico de acordes**,
+esto es, un gráfico de sectores bidimensional como se muestra en la
+Figura \@ref(fig:diagrama-sect). En dicho gráfico se representa al lado
+izquierdo del circulo el nivel de memoria VRAM de la tarjeta gráfica
+(Low, Medium y Critical) y al lado derecho la aquitectura del modelo
+(CNN, LSTM, ResNet y Transformer). La longitud del arco de cada nivel
+representa la propoción respecto al total de la muestra, y en este caso,
+son similares los de los tres niveles, (Low 0,334, Medium 0.339, y
+Critical 0.327). Las bandas conectan un modelo de aquitectura específico
+con una nivel de memoria, y el ancho de las mismas representa la
+frecuencia de esa combinación. Vemos que la más ancha es la de
+Transformer con Critical que como se aprecia en la Tabla
+\@ref(tab:tabla-contingencia-rel) es del 21.9%.
+
+```{r, diagrama-sect, fig.cap="Diagrama de Sectores"}
+
+# Define una paleta secuencial de morados basada en tu color #5C068C
+paleta_morada <- c("#E8DAEF","#C39BD3", "#8E44AD", "#5C068C")
+
+# Representa el diagrama de sectores 
+PlotCirc(table(arch,vram_level), rcol=paleta_morada, acol= c("#C39BD3", "#8E44AD", "#5C068C"))
+```
+
+**Diagramas de rectángulos adosados**
+
+Otra alternativa es utilizar gráficos de rectángulos (o barras para
+variables discretas) adosados. A continuaciónn se muestran las dos
+configuraciones posibles para estas dos variables.
+
+```{r, fig.width = 12}
+
+# Muestra los dos gráficos juntos
+par(mfrow = c(1,2)) 
+
+# Representa los diagramas de rectángulos adosados 
+barplot(tabla1, col = paleta_morada, beside = TRUE, legend.text = TRUE, args.legend = list(x ="top", cex = .8))
+barplot(t(tabla1), col = paleta_morada[1:3], beside = TRUE, legend.text = TRUE, args.legend = list(x ="top", cex = .8))
+```
+
+## Distribuciones Marginales
+
+Para analizar las distribuciones de ambos atributos por separado a
+partir de la tabla de frecuencias bidimensional, se deben obtener las
+distribuciones marginales de la variable X (Tabla
+\@ref(tab:tabla-marg-x)) y de la variable Y (Tabla
+\@ref(tab:tabla-marg-y)).
+
+**NOTA:** la distribución marginal de cada variable es simplemente una
+distribución unidimensional. Por tanto, para cada una de ellas se pueden
+representar y calcular todas las medidas descriptivas ya vistas.
+
+```{r, tabla-marg-x}
+
+# -------------------------------------------------------------
+#  Distribución Marginal de X (Filas)
+# -------------------------------------------------------------
+m_x <- margin.table(tabla1, 1) # Equivale a hacer table(arch)
+
+
+####      EDITAMOS LA TABLA      ####
+
+# Convierte a data.frame para personalizar los encabezados fácilmente
+df_mx <- as.data.frame(m_x)
+df_mx$f_x <- proportions(df_mx$Freq)
+colnames(df_mx) <- c("X", "$n_{x_i}$", "$f_{x_i}$")
+
+kbl(df_mx, 
+    caption = "Distribución Marginal de X", 
+    align = "c",            # Centra el contenido de las columnas
+    escape = FALSE) %>%     # Permite interpretar el código LaTeX
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE, 
+                position = "center") %>%
+  row_spec(0, background = "#5C068C", color = "white", bold = TRUE)
+
+
+
+```
+
+En la Tabla \@ref(tab:tabla-marg-x) se observa que se utilizan 366
+modelos de aprendizaje basados en arquitecturas de capas profundas de
+gran tamaño, específicamente Transformers, en comparación con los 149
+modelos que emplean arquitecturas recurrentes como LSTM.
+
+```{r,tabla-marg-y}
+# -------------------------------------------------------------
+#  Distribución Marginal de Y (Columnas)
+# -------------------------------------------------------------
+m_y <- margin.table(tabla1, 2) # Equivale a hacer table(vram_level)
+
+
+####      EDITAMOS LA TABLA      ####
+
+# Convierte a data.frame para personalizar los encabezados fácilmente
+df_my <- as.data.frame(m_y)
+df_my$f_y <- proportions(df_my$Freq)
+colnames(df_my) <- c("Y", "$n_{y_j}$", "$f_{y_j}$")
+
+kbl(df_my, 
+    caption = "Distribución Marginal de Y", 
+    align = "c", 
+    escape = FALSE) %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE, 
+                position = "center") %>%
+  row_spec(0, background = "#5C068C", color = "white", bold = TRUE)
+
+
+
+
+```
+
+En cuanto a los niveles de memoria VRAM de las tarjetas gráficas se
+concentran principalmente en el segmento medio, con un total de 339
+modelos que operan en esta categoría. Véase la Tabla
+\@ref(tab:tabla-marg-y).
+
+## Distribuciones Condicionadas
+
+### Tablas de Frecuencias
+
+Para mostrar la distribución de la variable nivel de memoria de la
+tarjeta gráfica en los experimentos con cada tipo de arquitectura se
+debe construir la tabla de frecuencias de la variable de *Y*= vram_level
+condicionada a cada categoría de la variable *X=arch.* Esto nos permite
+seleccionar una determinada arquitectura y analizar el comportamiento
+del nivel de memoria en los entrenamientos con esa arquitectura.
+
+Usando la función `proportions()` se pueden calcular ambas
+distribuciones condicionadas las de Y a cada valor de X y viceversa, la
+de X a cada valor de Y.
+
+```{r, tabla-condicionada-Y-X}
+# Distribuciones Condicionadas de Y a cada valor de X,  Y/X (por filas)
+
+cond_filas <- proportions(tabla1, "arch") # Nombre de la variable.
+# cond_filas <- proportions(tabla1, 1) # Posición (1: filas, 2: columnas).
+
+
+### Distribuciones Condicionadas de X a cada valor de Y,  X/Y (por columnas)
+# cond_cols <- round(proportions(tabla1, 2), 3)
+
+
+####      EDITAMOS LA TABLA       ####
+
+cond_filas = round(cond_filas, 3) # Redondea a 3 cifras
+
+# 3. Convierte a data.frame haciendo explícita la primera columna
+df_tabla3 <- data.frame(
+  `Arquitectura / Memoria VRAM` = rownames(cond_filas),
+  as.data.frame.matrix(cond_filas),
+  check.names = FALSE,
+  stringsAsFactors = FALSE
+  )
+
+kbl(df_tabla3, 
+    caption = "Distribución Condicionada Y / X",
+    align = "c",
+    escape = FALSE, 
+    row.names = FALSE) %>% # Quita los row.names automáticos de R
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), 
+                full_width = FALSE, 
+                position = "center") %>%
+  row_spec(0, background = "#5C068C", color = "white", bold = TRUE) %>%  # Encabezado mmorado oscuro
+  column_spec(1, background = "#5C068C", color = "white", bold = TRUE) # Primera columna con el mismo estilo
+
+
+```
+
+Como se ve en la Tabla \@ref(tab:tabla-condicionada-Y-X), en los modelos
+con las arquitecturas CNN y LSTM el nivel de memoria VRAM más frecuente
+es el bajo, representando el 100% en el caso de LSTM y el 71,6% en el
+caso de CNN. Por otra parte, con las arquitecturas RedNet y Transformer
+el nivel de memoria se distribuye entre medio y crítico, siendo de un
+59.8 % de nivel crítico con la arquitectura Transformer.
+
+### Diagramas de rectángulos adosados y apilados
+
+Este tipo de gráficos es propio de variables cualitativas, aunque es
+similar al diagrama de barras de las cuantitativas discretas. En este
+los rectángulos (o barras) se pueden presentar en:
+
+- Forma adosada, unos al lado de otros como se muestra en la siguiente
+  Figura \@ref(fig:diagrama-rect-ados)
+
+```{r, diagrama-rect-ados, fig.cap="Diagrama de Rectángulos Adosados"}
+# Diagrama de rectángulos adosados 
+
+# Se debe trasponer la tabla de frecuencias condicionada para obtener el gráfico adecuado.
+
+barplot(t(cond_filas),beside=TRUE,xlab="Arquitectura del Modelo",col=paleta_morada[1:3], legend.tex =TRUE, args.legend=list(x=12, y=1,  bg="white", ncol=2), ylim=c(0,1))
+
+```
+
+- Forma apilada como se recoge en la Figura
+  \@ref(fig:diagrama-rect-apil).
+
+```{r, diagrama-rect-apil, fig.cap="Diagrama de Rectángulos Apilados"}
+
+barplot(t(cond_filas),beside=FALSE,col=paleta_morada,legend.tex = TRUE, args.legend=list(x=12, y=1,  bg="white", ncol=2), xlab="Arquitectura del Modelo")
+```
+
+La función `proportions()` tiene por defecto un gráfico de mosaico
+asociado, veámoslo usando la función `plot()`.
+
+```{r mosaico, fig.cap="Mosaico de la Arquitectura del Modelo y la Memoria VRAM de la Tarjeta Gráfica"}
+
+plot(cond_filas[,3:1], col=paleta_morada[3:1], , main = " ", xlab = "Arquitectura del Modelo", ylab = "Nivel de memoria") # Invierte el orden de las columnas para que reresente los niveles del atributo ordinal en el orden apropiado.
+```
+
+En la Figura \@ref(fig:mosaico) se puede ver tanto la distribución
+conjunta como la condicionada a la variable arquitectura del modelo,
+dependiendo de si vemos el gráfico en su conjunto o sólo por categorías
+de la arquitectura.
+
+### Diagramas de sectores condicionado.
+
+Para mostrar la distribución condicionada también se puede realizar un
+gráfico de sectores para cada valor de la variable a la que
+condicionamos, usando un bucle `for`.
+
+```{r, condpie, fig.width= 8, fig.height=8}
+
+# Muestra los gráficos de sectores 2 a 2 e indica los márgenes
+par(mfrow = c(2, 2), mar = c(2, 2, 2, 2))
+
+n = nrow(cond_filas)
+main_labs = levels(arch) # Etiquetas de las categorías de la variable
+cat_labs = colnames(cond_filas) # Nombres de las columnas/categorías del sector
+
+for(i in 1:n) {
+  # 1. Extraer los datos de la fila actual
+  vals <- cond_filas[i, ]
+  
+  # 2. Calcular los porcentajes
+  # Como cond_filas ya son proporciones (suman 1), es simplemente vals * 100.
+   pcts <- round(100 * vals, 1)
+  
+  # 3. Construir las etiquetas: "Categoría: (Porcentaje%)"
+   lbls <- paste0(cat_labs, "\n", "(", pcts, "%)")
+  
+  # 4. Dibujar el gráfico de sectores con las etiquetas
+  pie(vals, 
+      labels = lbls, 
+      main = main_labs[i], 
+      col = paleta_morada[1:ncol(cond_filas)], 
+      radius = 0.8)
+}
+
+```
+
+# Análisis de una Variable Continua por Grupos
+
+Cuando tenemos una variable continua *Y,* que clasifica en grupos
+atendiendo a los valores de una variable categórica *X*, nuestro
+objetivo es estudiar el comportamiento (o distribución) de *Y* en cada
+uno de los niveles de *X* y hacer comparaciones entre grupos.
+
+En esta sección veremos como extender las medidas y representaciones
+utiliadas en el análsis descriptivo unidimensional (labs 03 y 04) al
+caso bidimensional con una variable continua y una variable categórica
+(denominada factor).
+
+Como ejemplo, se analizará la distribución de **loss_final** "**función
+de pérdida final"** en función de **lr** "**nivel de aprendizaje"** .
+
+## Histogramas adosados
+
+En el análisis de una variable cuantitativa continua según los grupos
+determinados por un atributo o una variable discreta con pocos valores,
+se suelen representar histogramas por cada grupo para realizar
+comparativas. Esto se puede conseguir usando la función `histogram( )`
+de la librería `lattice`.
+
+```{r, eval = FALSE}
+
+# Representa el Histograma de loss_final por cada nivel de aprendizaje
+histogram(~loss_final|lr, col=paleta_morada[4])
+
+```
+
+Una forma alternativa para generar los histogramas condicionados, sin
+recurrir a librerías adicionales es combinando la función `hist()` con
+un bucle `for,` o con alguna de las funciones de la familia `apply()` y
+personalizarlos como se muestra a contiuación.
+
+```{r hist-group, fig.cap="Histograma de pérdida final  para cada nivel de aprendizaje"}
+
+# Divide el  conjunto de datos en 3 bases de datos en función de los valores de lr
+ 
+train_lr = split(Training, Training$lr)
+
+# La función lapply aplica el procedimiento a realizar a cada elemento de la lista. 
+# En este caso realiza el histograma sobre cada variable loss_final de cada lista determinada por los valores de la tasa de aprendizaje
+# par(mfrow = c(1,3)) 
+# hlist = lapply(train_lr, function(dt)  hist(dt$loss_final, freq = FALSE, xlim = c(0,5), ylim=c(0,1), col = paleta_morada[3], main = " ", xlab = "loss_final"))
+
+
+# Otra alternativa es usar la función sapply para generar los tres gráficos especificando el formato de cada gráfico.
+  par(mfrow = c(1,3)) # Muestra los tres gráficos juntos
+
+  labs_lr = levels(Training$lr) ## Etiquetas de los niveles lr
+  id = 1:length(labs_lr) # Índice sobre el que nos movemos.
+  hlist = sapply(id, function(i) hist(
+            train_lr[[i]]$loss_final, 
+            freq = FALSE, 
+            xlim = c(0,5), # Se ajusta el eje X de 0 a 5
+            ylim = c(0,1), # Se ajusta el eje y de 0 a 1 ya que se representa la density
+            col = paleta_morada[i], # se asigna un color para cada valor de lr
+            main = labs_lr[i], # Pone un título a cada gráfico
+            xlab = "loss_final"))
+```
+
+Según se puede apreciar en la Figura \@ref(fig:hist-group), la pérdida
+al concluir el entrenamiento varía dependiendo de la tasa de
+aprendizaje, en el caso de una tasa muy baja y baja, la distribución es
+asimétrica a la derecha, sin embargo, cuando es estándar la asimetría es
+bastante menor. De hecho, la pérdida se concentra sobre todo en valores
+inferiores a 1 cuando la tasa de aprendizaje está en el rango de muy
+baja a baja, y de 2 a 2.5 cuando el nivel es estándar.
+
+## Medidas de forma
+
+Todas las medidas descriptivas univariantes explicadas tanto en teoría
+como en prácticas se pueden calcular por grupos, utilizando la función
+`tapply()`. Veamos las medidas de forma para completar la interpretación
+del histograma por grupos.
+
+```{r tab-forma}
+
+# Se obtienen los coeficientes de asimetría y curtosis por niveles de lr
+shape_list =  tapply(loss_final, lr, function(x) c(skewness(x),kurtosis(x))) 
+# Se están usando las funciones de la librería e1071 (type=3, por defecto en ambos coeficientes)
+shape_list
+
+## shape_list se transforma en una tabla para poder editarla
+shape_mat = matrix(unlist(shape_list), ncol = 3, nrow = 2, byrow = FALSE)
+rownames(shape_mat) = c("Asimetría", "Curtosis")
+colnames(shape_mat) = labs_lr # Etiquetas de lr tasa de aprendizaje
+
+kbl(shape_mat,
+    digits = 3,
+    caption = "Asimetría y curtosis de loss_final condicionada a la tase de aprendizaje, lr",
+    align = "c",
+    escape = FALSE,
+    row.names = TRUE) %>%  
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), 
+                full_width = FALSE, 
+                position = "center") %>%
+  row_spec(0, background = "#5C068C", color = "white", bold = TRUE) %>%  # Encabezado mmorado oscuro
+  column_spec(1, background = "#5C068C", color = "white", bold = TRUE) # Primera columna con el mismo estilo
+
+
+```
+
+Como vemos en la Tabla \@ref(tab:tab-forma) todos los coeficientes de
+asimetría en cada nivel de lr son positivos, lo que indica asimetría a
+la derecha. No obstante, en el caso de la tasa de aprendizaje estándar
+el coeficiente es bastante reducido 0.213, luego se podría decir que en
+este caso presenta una ligera asimetría positiva. Por otra parte, el
+signo positivo de los coeficientes de curtosis en los niveles muy bajo y
+bajo de la tasa de aprendizaje, indican que las distribuciones de
+loss_final son más apuntadas que la normal en tales grupos, y por tanto,
+presentan menos dispersión que ésta. En el nivel estándar de la tasa de
+aprendizaje el signo del coeficiente es negativo, en consecuencia la
+distribuión del loss_final en dicho grupo es menos apuntada que la
+normal estándar, en consecuencia su variación es mayor.
+
+## Diagrama de Caja y Patillas
+
+También en el análisis de una variable cuantitativa continua según los
+grupos determinados por un atributo o una variable discreta con pocos
+valores, se pueden representar diagramas de caja y patillas, como recoge
+la Figura \@ref(fig:Diagrama-Caj-Pat).
+
+```{r, Diagrama-Caj-Pat, fig.cap="Diagramas de Caja y Patillas por grupos"}
+
+# Diagrama de caja y patillas por cada grupo
+boxplot(loss_final~lr, ylim=c(0,5), col=paleta_morada, xlab = "Tasa de aprendizaje")  
+```
+
+El diagrama de Caja y Patillas por grupos que presenta la Figura
+\@ref(fig:Diagrama-Caj-Pat) muestra que existe bastante diferencia de la
+función de périda al final del proceso según el nivel de la tasa de
+aprendizaje. Además, corrobora lo señalado en los histogramas y en las
+medidas de forma, en relación a la asimetría a la derecha de la pérdida
+en los dos niveles inferiores (Very Low y Low), ya que la mediana está
+más próxima al primer cuartil. En el nivel estándar la mediana está más
+próxima al tercer cuartil, sin embargo, la patilla superior es más larga
+que la inferior, de aquí que la asimetría sea más suave.
+
+De forma adicional, podemos apreciar que aunque en el nivel Low de la
+tasa de aprendizaje el 50% de los datos está más concentrado, que en los
+otros dos niveles presenta un número bastante notable de valores
+extremos. Comparando las gráficas se puede decir que la pérdida al
+concluir el entrenamiento en el nivel estándar es la que más se ajusta a
+una normal.
+
+Si deseamos mostrar los datos atípicos de cada grupo podemos usar
+también un `tapply`.
+
+```{r}
+atip = tapply(loss_final, lr, function(x) sort(Outlier(x)))
+atip
+
+```
+
+Destaca el elevado número de datos atípicos de la pérdida final dentro
+del grupo del nivel bajo de la tasa de aprendizaje, siendo éste de 28
+valores.
+
+## Medidas de posición
+
+De igual forma que antes, veamos las medidas de posición por grupos para
+complementar la interpretación del Diagrama de Caja y Patillas, usando
+`tapply`().
+
+```{r, desc-tab-cond}
+
+# Se aplica tapply para obtener las medidas de summary además del rango intercuartílico por grupos
+desc_list = tapply(loss_final, lr, function(x) c(summary(x),IQR(x)))
+desc_list
+  
+# Se transforma en tabla  para su edición
+desc_labs = names(desc_list[[1]])
+desc_labs[length(desc_labs)] = "IQR"
+desc_mat = matrix(unlist(desc_list), ncol = length(desc_labs), nrow = length(labs_lr), byrow = TRUE)
+colnames(desc_mat) = desc_labs
+rownames(desc_mat) = labs_lr
+
+kbl(desc_mat,
+    digits = 3,
+    caption = "Medidas de posición de loss_final condiconada a la tasa de aprendizaje (lr),",
+    align = "c",
+    escape = FALSE,
+    row.names = TRUE) %>%  
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), 
+                full_width = FALSE, 
+                position = "center") %>%
+  row_spec(0, background = "#5C068C", color = "white", bold = TRUE) %>%  # Encabezado mmorado oscuro
+  column_spec(1, background = "#5C068C", color = "white", bold = TRUE) # Primera columna con el mismo estilo
+
+```
+
+## Resumen descriptivo por grupos
+
+A continuación veamos como obtener un resumen de medidas de descriptivas
+de una variable continua para cada nivel de un factor de forma conjunta,
+usando la función `Desc` de la librería `DescTools`.
+
+```{r}
+
+# Permite realizar un resumen de medidas descriptivas de la variable respuesta para cada nivel de la variable factor, además de dos gráficos para compararlas.
+Desc(loss_final~lr, Training, digits=2, verbose=c(3), plotit=TRUE)
+```
+
+En la salida de este procedimiento estadístico pueden observar que
+además de la tabla descriptiva y los gráficos, `R` muestra el resultado
+del test de independencia de **Kruskal-Wallis,** cuyo estadístico es una
+Chi-cuadrado y toma el valor $155.94$. Esta es una prueba de hipótesis
+no paramétrica que compara el comportamiento de una variable numérica
+entre los grupos definidos por un factor o atributo. También se la
+conoce como **Anova por rangos**, porque no compara valores sino suma de
+rangos o posiciones de los datos. Como el $p-valor$ es próximo a 0,
+existen evidencias de dependencia entre las variables, es decir, la
+función de pérdida depende de la tasa de aprendizaje, como ya habíamos
+detectado en las representaciones gráficas.
+
+# Contrastes de independencia
+
+## Test $\chi^2$ de independencia entre variables categóricas
+
+El **test Chi-cuadrado** $\chi^2$ de independencia nos permite
+contrastar si dos variables cualitativas (atributos) o variables
+cuantitativas discretas son idependientes ($H_0$) o están asociadas
+($H_1$).
+
+- **Hipótesis nula (**$H_0$): Las variables son independientes (no
+  existe asociación).
+- **Hipótesis alternativa (**$H_1$): Las variables son dependientes
+  (existe asociación).
+
+### Estadístico de contraste
+
+El **estadístico de constraste** mide la discrepancia entre las
+frecuencias observadas en la muestra y las frecuencias que esperaríamos
+obtener si las dos variables fuesen independientes.
+
+$$\chi^2_{(r-1)(c-1)} = \sum_{i=1}^{r} \sum_{j=1}^{c} \frac{\left(o_{ij} - e_{ij}\right)^2}{e_{ij}}$$
+
+donde:
+
+- $o_{ij} = n_{ij}$ (Frecuencia absoluta observada): Número de
+  observaciones que presentan de forma simultánea el par de valores
+  $(x_{i}, y_{j})$, correspondientes a la fila $i$ y la columna $j$.
+- $e_{ij}$ (Frecuencia abosluta esperada): Número de observaciones
+  esperadas del par de valores $(x_{i}, y_{j})$ bajo el supuesto de
+  independencia, es decir:
+
+$$e_{ij} = \frac{n_{x_{i}} \cdot n_{y_{j}}}{n}$$
+
+siendo
+
+- $n_{x_{i}}$ y $n_{y_{j}}$: las frecuencias marginales
+
+- $n$: el tamaño total de la muestra ($n = \sum_{i,j} n_{ij}$) y
+
+- $r$ y $c$: el número de filas y columnas en la tabla de contingencia,
+  respectivamente.
+
+Bajo la hipótesis nula, el estadístico del contraste tiene una
+distribución Chi-cuadrado con $k=(r - 1) \times (c - 1)$ grados de
+libertad.
+
+### Cálculo del p-valor y regla de decisión
+
+- Se fija un **nivel de significación** $\alpha$ (por ejemplo,
+  $\alpha = 0.05$), es decir, el máximo nivel de error permitido y
+  calculamos el **valor crítico** $\chi^2_{\alpha; k}$ asociado a dicho
+  nivel.
+
+- **Calculamos el** $p-valor$: la probabilidad de obtener un valor del
+  estadístico igual o superior al observado, supuesto cierto $H_0$,
+  intuitivamente es el área que deja el *valor observado* hacia fuera.
+
+$$p\text{-valor} = P(\chi^2_{k} \ge \chi^2_{\text{obs}} \mid H_0)$$
+
+- **Regla de decisión:**
+  - **Si** $\chi^2_{\text{obs}} > \chi^2_{\alpha}$ $\Rightarrow$
+    $p\text{-valor} < \alpha$: se rechaza la hipótesos nula $H_0$, es
+    decir, se tienen evidencias de dependencia entre las variables.
+  - **Si** $\chi^2_{\text{obs}} \le \chi^2_{\alpha}$ $\Rightarrow$
+    $p\text{-valor} \ge \alpha$: se acepta la hipotesis nula, $H_0$, por
+    tanto, las variables son independientes.
+
+## Aplicación en R
+
+La función `indepchisq.test()` del paquete `LearningStats` calcula
+automáticamente tanto las frecuencias esperadas $e_{ij}$ como el
+estadístico $\chi^2$. Vamos entonces a contrastar la independencia entre
+las variables **arch "arquitectura del modelo"** y **red_level "nivel de
+reducción de la función de perdida".**
+
+------------------------------------------------------------------------
+
+```{r}
+
+# Se usa la librería LearningStats para realizar el test de independencia de la Chi-cuadrado
+  library(LearningStats)
+  tab = table(arch,red_level)
+  indepchisq.test(tab,  alpha = 0.05, plot = TRUE)
+  
+
+```
+
+Como se aprecia en el gráfico el valor del estadístico
+$\chi^2_{\text{obs}}$ es menor que el valor crítico, esto es, cae dentro
+de la región de aceptación y por tanto, se acepta que la hipótesis de
+que las variables arquitectura y nivel de reducción de la función de
+pérdida son independientes.
+
+# Ejercicios Propuestos
+
+1.  Analizar la relación entre los atributos **lr**, **"tasa de
+    aprendizaje inicial"** y **red_level,** **"niveles de reducción del
+    error"**.
+
+2.  Analizar la relación entre la variable continua **vram_gb, "Memoria
+    gráfica reservada"** agrupada por **arch "arquitectura del
+    modelo"**.
+
+3.  Analizar la relación entre la variable continua **vram_gb, "Memoria
+    gráfica reservada"** agrupada por **net_complexity "tramo de
+    capas"**.

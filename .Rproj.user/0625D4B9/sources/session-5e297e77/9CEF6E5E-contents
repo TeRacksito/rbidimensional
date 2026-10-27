@@ -1,0 +1,32 @@
+load("HIPER200.RData")
+attach(HIPER200)
+
+
+
+mod1 <- lm(peso ~ edad + I(edad^2))
+summary(mod1)$coefficients["edad", "Estimate"]
+
+
+
+mean(TAsist1[es_hiper == "no lo sabe"], na.rm = TRUE)
+
+
+
+sd(TAsist0[act_fisi == "intensa"], na.rm = TRUE)
+
+
+
+mod7 <- lm(TAdias1 ~ log(TAdias0))
+summary(mod7)$r.squared
+
+
+
+mod10_m <- lm(TAdias1 ~ TAdias0, subset = (genero == "masculino"))
+mod10_f <- lm(TAdias1 ~ TAdias0, subset = (genero == "femenino"))
+summary(mod10_m)$coefficients["TAdias0", "Estimate"]
+summary(mod10_f)$coefficients["TAdias0", "Estimate"]
+
+
+
+sub11 <- HIPER200[act_fisi == "moderada" & cafe == "no toma", ]
+prop.table(table(sub11$cl_peso))["normal"] * 100

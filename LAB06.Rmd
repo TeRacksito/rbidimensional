@@ -1,0 +1,432 @@
+---
+title: "Práctica 6: Correlación y Regresión Lineal"
+subtitle: "Grado en Ingeniería Informática"
+author: "Isabel Fuentes Santos y Carmen Elvira Ramos Domínguez"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    toc: true                # Activa la tabla de contenidos
+    toc_depth: 5             # Niveles H1 a H5
+    toc_float:
+      collapsed: true       # No muestra el índice desplegado
+      smooth_scroll: true    # Desplazamiento suave
+    number_sections: true    # Numera secciones (1, 1.1, etc.)
+    fig_caption: true
+    theme: flatly            # Tema visual
+    highlight: tango         # Resaltado de código
+    code_folding: show       # Muestra/oculta código
+    lang: es                 # usar el lenguaje español
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{=html}
+<style>
+/* Captions de figuras (ggplot y R base) */
+.figure .caption, 
+figcaption, 
+p.caption {
+  font-weight: bold !important;  /* Aplica negrita */
+  font-size: 1.25em !important;  /* Aumenta el tamaño del texto */
+  color: #333333 !important;     /* Color del texto */
+  text-align: center !important; /* Centra el texto */
+}
+
+/* Captions de tablas (por si también quieres darles el mismo formato) */
+caption {
+  font-weight: bold !important;
+  font-size: 1.25em !important;
+  color: #333333 !important;
+  text-align: center !important;
+}
+
+table, table.table, .main-container table {
+  border-collapse: collapse!important;
+  width: auto !important;
+  margin-left: auto !important;       /* Centrado horizontal */
+  margin-right: auto !important;      /* Centrado horizontal */
+  margin-bottom: 1rem !important;
+  font-size: 0.85em !important; /* Reduce el tamaño del texto */
+  border: 1px solid #dddddd !important; /* Borde exterior de la tabla */
+}
+
+table th, table td,
+.main-container table th, .main-container table td {
+  border: 1px solid #dddddd!important;
+  text-align: center!important;
+  padding: 8px !important;;
+}
+
+tr:nth-child(even) {
+  background-color: #E8DAEF; /* Filas alternas en morado claro */
+}
+
+th {
+  background-color: #5C068C !important;; /* Color de cabecera */
+  color: white !important;;
+}
+</style>
+```
+
+```{r setup, include=FALSE}
+# Configuración global de los bloques de código (knitr)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 8,
+  fig.height = 5,
+  fig.align = "center"
+)
+
+# Carga de librerías de edición
+library(knitr)
+library(kableExtra)
+
+```
+
+# Introducción y Objetivos
+
+En esta práctica analizaremos si existe relación lineal entre dos
+variables cuantitativas y si es así, aprenderemos a construir el modelo
+lineal con la finalidad de predecir una variable en función de valores
+conocidos de la otra.
+
+Se tratarán los siguientes puntos:
+
+- Cálculo de la **matriz de correlaciones** entre las variables del
+  fichero Training.Rdata y test para discernir entre variables
+  incorreladas y entre las que existe relación lineal.
+- **Gráfico de Dispersión** entre dos variables continuas.
+- Ajuste del **modelo lineal** y análisis de los resultados mediante la
+  función `summary()`
+- **Diagnóstico** del modelo
+- **Predicción** de valores de la variable respuesta
+- Resolución de los **ejercicios propuestos** de prácticas.
+
+Cargamos el fichero Training.RData como se indica a continuación.
+
+```{r}
+load("Training.Rdata")
+attach(Training) 
+```
+
+y las librerias que vamos a utilizar:
+
+```{r}
+
+library(Hmisc) # Test de corrleación lineal
+library(lmtest) # Test de homocedasticidad
+
+
+```
+
+# Matriz de Correlaciones
+
+En primer lugar seleccionamos del conjunto de datos las variables
+numéricas.
+
+```{r}
+summary(Training) # 
+cid <- c(4,6:10,12) # Se seleccionan las columnas de las variables numéricas
+
+```
+
+Calculamos la matriz de correlaciones entre pares de variables
+continuas, para esto usamos:
+
+- La función `cor` del paquete `stats`: nos devuelve la matríz de
+  correlaciones entre cada par de un conjunto de variables o de sólo dos
+  de ellas. Ver el argumento
+  `method = c("pearson", "kendall", "spearman")` en la ayuda.´
+
+- La función `rcorr` del paquete `Hmisc` que, adenás de la correlación,
+  aplica un tests para contrastar si dichos coeficientes son
+  significactivos (suficientemente distintos de 0). Ver el argumento
+  `type=c("pearson","spearman")` en la ayda,
+
+**NOTA:** estamos calcuando el **ceficiente de correlación de Pearson**
+pero ambas funciones permiten también calcular coeficientes de
+correlación basados en rangos ("kendall", "spearman") , recomendables
+cuando las variables no tienen disttibución normal.
+
+```{r}
+cor(Training[,cid]) # matriz de correlación básica
+
+cor_mat<- rcorr(as.matrix(Training[,cid]), type="pearson") # Muestra la matriz de correlación y la matriz de p-valores del contraste para ver si el coef. de correlación es nulo o no
+cor_mat
+```
+
+Como nuestro objetivo es realizar una regresión lineal, lo lógico es
+elegir como variable regresora o explicativa una variable de
+configuración y la única numérica es **net_layers, "número de capas
+profundas diseñadas".**
+
+```{r}
+cor_nlay = rbind(cor_mat$r[1,-1], cor_mat$P[1,-1])
+rownames(cor_nlay) = c("r", "p-value")
+cor_nlay
+
+```
+
+El verctor de correlaciones entre **net_layers** y el resto de variables
+muestra que la variable **vram_gb, "memoria gráfica reservada"** es la
+que presenta mayor valor del coeficiente de correlación, $\rho= 0.8039$.
+
+# Gráfico de Dispersión
+
+Representamos entonces el gráfico de dispersión o nube de puntos entre
+ambas variables **net_layers, "número de capas profundas diseñadas"** y
+**vram_gb, "memoria gráfica reservada".**
+
+```{r, graf-disp, fig.width=6, fig.cap = "Gráfico de Dispersión entre net_layers y vram_gb"}
+
+plot(Training$net_layers,Training$vram_gb,xlab = "net_layers", ylab = "vram_gb", pch = 20)
+```
+
+Como podemos ver en la Figura \@ref(fig:graf-disp) existen cuatro
+agrupaciones de puntos lo que indica la presencia de un factor
+influyendo en la relación entre ambas variables. Veamos de cuál se
+trata. Evidentemente buscamos entre las variables cualitativas de
+configuración (incluida net_complexity que es una categorización de
+net_layers).
+
+```{r}
+fid<-c(2,3,5,13)
+summary(Training[,fid]) # Detectamos la variables con cuatro categorías
+```
+
+Como vemos son dos las variables que presentan cuatro categorías, si
+representamos para ambas el mismo gráfico de dispersión con puntos de
+distintos colores según las categorías podemos identificar el factor que
+está influyendo.
+
+```{r, graf-disp-agr, fig.width=10, fig.cap= "Gráficos de Dispersión por categorías de las variables: arch y net_comexity"}
+
+par(mfrow = c(1,2))
+cols = 2:5
+plot(Training$net_layers,Training$vram_gb,xlab = "net_layers", ylab = "vram_gb", pch = 20)
+points(Training$net_layers,Training$vram_gb,pch = 20, col = cols[as.numeric(Training$arch)])
+legend("topleft", legend = levels(Training$arch), cex = 0.8, pch = 20, col= cols)
+
+
+plot(Training$net_layers,Training$vram_gb,xlab = "net_layers", ylab = "vram_gb", pch = 20)
+points(Training$net_layers,Training$vram_gb,pch = 20, col = cols[as.numeric(Training$net_complexity)])
+legend("topleft", legend = levels(Training$net_complexity), cex = 0.8, pch = 20, col= cols)
+
+
+```
+
+Como vemos en la Figura \@ref(fig:graf-disp-agr) la variable **arch
+"arquitectura del modelo"** es el factor influyente, puesto que cada
+grupo de puntos se corresponde con una categoría de la variable o un
+único color, mientras que en el caso de la variable **net_complexity,
+complejidad de la red** los colores se entremezclan.
+
+# Ajuste a un Modelo Lineal
+
+Decidimos realizar un ajuste a un modelo lineal entre las variables
+**vram_gb, "memoria gráfica reservada"** y **net_layers "número de capas
+profundas diseñadas",** pero sólo de los entrenamientos con la
+**arquitectura** ***ResNet***, que se corresponde con la nube de puntos
+de color azul más oscuro.
+
+```{r}
+
+# Generamos el nuevo dataframe
+
+Train_arch <- split(Training, Training$arch) # Divide el dataframe total en tantos dataframe como niveles tenga el factor arch
+dt<-Train_arch$ResNet # Seleccionas el dataframe correspondiente a la arquitectura ResNet
+
+# Ajustamos el modelo
+
+ml<- lm (vram_gb~net_layers, data=dt) # Ajusta el modelo lineal
+ml # Devuelve sólo el modelo con sus coeficientes
+summary(ml) # Devuelve un resumen de las principales caraterísticas del modelo.
+
+er<- ml$residuals # extrae los residuos, equivalente a residuals(ml)
+
+# Alternativa ml<-lm(vram_gb~net_layers, data=Training, subset=(arch=="ResNet"))
+
+```
+
+La función `summary` sobre el modelo lineal muestra:
+
+- medidas descriptivas de los residuos, sobre todo los cuartiles. Vemos
+  que el 50% de los mismos están entre $-1.1920$ y $1.0885$.
+
+- coeficientes del modelo de regresión: siendo la pendiente de la recta
+  $\beta_{1}= 0.45364$ y $\beta_{0}= 1.65343$. Los estadísticos para
+  contrastar si dichos coeficientes son nulos o no, se distribuyen como
+  t-Students y toman los valores de $81.292$ en el contraste de
+  $H_{0}: \beta_{1}= 0$ frente a $H_{1}: \beta_{1}\neq 0$ y $5.697$ en
+  el contraste de $H_{0}: \beta_{0}= 0$ frente a
+  $H_{1}: \beta_{0}\neq 0$. El $p-valor$ de ambos contrastes es inferior
+  a $2e^{-16}$, por tanto, son distinto de cero. Si el $\beta_{0}$ fuese
+  nulo sólo indicaría que la recta de regresión pasa por el origen, pero
+  si fuese el $\beta_{1}$ indicaría que no hay relación lineal entre las
+  variables analizadas.
+
+- error estándar de la estimación que es bastante pequeño $1.547$ .
+
+- coeficiente de determinación $R^{2}=0.9669$ que es muy próximo a 1, lo
+  que indica un muy buen ajuste, y el coeficiente ajustado según el
+  número de variables explicativas, que en este caso es casi igual
+  porque sólo tenemos una.
+
+- estadístico de la anova de la regresión $F_{1, 226} = 6608$ que se
+  distrbuye como una F de Snedecor con 1 y 228-2=226 grados de libertad,
+  cuyo $p-valor < 2.2e^{-16}$ es muy pequeño lo que indica que se
+  rechaza la hipótesis nula $H_{0}:~No~hay~relación~lineal$, por tanto,
+  sí la hay, luego el modelo se ajusta adecuadamente.
+
+También se puede mostrar de forma detallada el anova de la regresión con
+la función `anova()`.
+
+```{r}
+anova(ml) # Anova de la Regresión
+```
+
+# Diagnóstico del Modelo
+
+En este apartado comprobaremos si se cumplen las hipótesis necesarias
+para poder realizar la regresión lineal.
+
+- Normalidad de la variable dependiente Y para valores fijos de X.
+
+- Homocedasticidad o igualdad de varianzas de la variable respuesta Y
+  para valores fijos de X
+
+- Independencia de las observaciones de la variable Y para valores fijos
+  de X
+
+- Linealidad entre la variable respuesta Y, y la variable regresora o
+  explicativa X
+
+Tales hipótesis se traducen en que los residuos $e_{ij}\sim N(0,\sigma)$
+e independientes.
+
+La función `lm` genera cuatro gráficos de diagnóstico que representamos
+mediante la función `plot`, y que nos permiten comprobar si el modelo
+que hemos ajustado verifica las hipótesis de la regresión.
+
+```{r, diag-lm, fig.with=14, fig.height=8, fig.cap="Gráficos de Diagnósticos"}
+
+par(mfrow=c(2,2))
+plot(ml)
+```
+
+## Normalidad de los residuos
+
+El gráfico Q-Q residuals de la Figura \@ref(fig:diag-lm) muestra los
+residuos estándarizados frente a los cuantiles de la distribución
+$N(0,1)$. Si la distribución de los residuos es Normal los puntos
+deberán ajustarse a la diagonal principal o línea punteada, cosa que
+ocurre en nuestro caso. Además de la gráfica, cuya interpretación puede
+ser subjetiva, es conveniente aplicar un test de Normalidad. En este
+caso vamos a utilizar el **test de Shapiro-Wilk** que sirve tanto para
+muestras grandes como pequeñas.
+
+```{r}
+sh <- shapiro.test(er) # Se aplica el test sobre los residuos
+sh
+```
+
+Como en todo test muestra el valor del estadístico $w=0.99317$ y el
+$p-valor = 0.3785$. Como es mayor que $\alpha=0.1$ se acepta la
+hipótesis nula $H_{0}:e_{ij}\sim N(0,\sigma)$.
+
+## Homocedasticidad (Igualdad de Varianzas)
+
+El gráfico Scale_Location de la Figura \@ref(fig:diag-lm), que muestra
+la raiz de los residuos estándarizados frente a los valores ajustados,
+nos permite comprobar esta hipótesis. Si la línea roja está próxima a la
+horizontal y los puntos no presentan ningún patrón (por ejemplo forma de
+embudo) se deduce que las varianzas de los residuos es constante. Lo que
+se deduce de nuestro gráfico. Igual que en el caso anterior, aplicamos
+un test formal para confirmar nuestra interpretación, que sería el
+**test de Breusch-Pagan**.
+
+```{r}
+bptest(ml) # Aplica el test de Breusch-Pagan
+```
+
+El estadístico del test de Breusch-Pagan es una Chi-cuadrado con 1 grado
+de libertad (nº de variables explicativas o regresoras) y toma el valor
+$BP=0.58635$ con $p-valor=0.4438 > 0.1$, por tanto, aceptamos la
+hipótesis nula de igualdad de varianzas.
+
+## Independencia de los residuos
+
+El gráfico Residuals vs Fitted de la Figura \@ref(fig:diag-lm), que
+muestra los residuos frente a los valores ajustados permite comprobar la
+hipótesis de linealidad e independencia. Si la línea roja coincide con
+el eje de abcisas y los puntos se distrbuyen en torno al cero sin
+presentar ningún patrón se deduce que los residuos son independientes y
+el modelo lineal es adecuado para ajustar a nuestros datos. Para
+corroborar dicho resultado hacemos uso del **test de Durbin Watson.**
+
+```{r}
+dwtest(ml, alternative="two.sided") # Se aplica el test de Durbin Watson
+```
+
+En dicho test se contrasta la hipótesis nula de independencia de los
+residuos frente a la altenativa de que los residuos están
+autocorrelados. El estadístico del test de Durbin-Watson toma el valor
+$DW=2.0929$ con $p-valor=0.4808 > 0.1$, por tanto, aceptamos la
+hipótesis nula de independencia. El valor del estadístico de Durbin
+Watson siempre toma valores en el intervalo [0, 4]. En función de su
+valor tenemos que:
+
+- $DB \approx 2$ : no hay autocorrelación, esto es, son independientes
+
+- $DB < 2$ : autocorrelación positiva
+
+- $DB > 2$ : autocorrelación negativa
+
+Para finalizar, el último gráfico del diagnóstico (Residuals vs
+Leverage) permite detectar datos atípicos y/o influyentes que pueden
+introducir sesgos en el modelo.
+
+# Predicción
+
+Todas las funciones de `R` que ajustan modelos predictivos tienen
+asociada una función `predict()`, siendo sus principales argumentos
+
+- `object`: el modelo que se ha ajustado
+
+- `interval = c("none", "confidence·, "prediction")`, donde `none` que
+  es el valor por defecto, no calcula ningún intervalo, `confidence`
+  calcula el intervalo de confianza del ajuste y `prediction` calcula el
+  intervalo de confianza de predicción.
+
+- `newdata`: dataframe con los valores de las variables explicativas
+  para los que se realiza la predicción. Sólo es necesario si se desea
+  predecir la variable Y para nuevos valores de la X, que no recoge el
+  fichero de datos.
+
+```{r, disp-pred, fig.width=6, fig.cap="Ajuste del model con bandas de confianza y predicción"}
+
+# Para predecir unos valores concretos
+val_new <- data.frame(net_layers = c(35, 58, 75))
+predict(ml, newdata=val_new)
+
+bandas.frame <- data.frame(net_layers=18:80) # Nuevos valores de la variable explicativa, net-layers
+
+bc <- predict(ml, interval = 'confidence', newdata = bandas.frame) # banda de confianza
+head(bc)
+
+bp <- predict(ml, interval = 'prediction', newdata = bandas.frame) # banda de predicción
+
+plot(dt$net_layers,dt$vram_gb,xlab = "net_layers", ylab = "vram_gb") # Diagrama de dispersión
+matlines(bandas.frame$net_layers, bc, lty=c(1,2,2), col=c("green",'blue','blue')) 
+matlines(bandas.frame$net_layers, bp, lty=c(0,3,3), col='red')
+legend("topleft", legend = c("Fit","Confidence","Prediction"), col = c("green","blue","red"), lty=1:3)
+```
+
+# Ejercicios Propuestos
+
+1.  Analizar la relación lineal entre las variables **train-time,**
+    **"tiempo de entrenamiento"** y **vram_gb, "Memoria gráfica
+    reservada"** considerando vram_gb como variable explicativa.

@@ -1,0 +1,45 @@
+
+# ---- VARIANZA RESIDUAL MUESTRAL (S_e^2) Y PROPIEDADES DE LOS RESIDUOS ----
+mod_ejemplo <- lm(TAdias1 ~ TAdias0)
+residuos_ej <- residuals(mod_ejemplo)
+
+# Varianza residual muestral (S_e^2 = promedio de residuos al cuadrado)
+var_residual <- mean(residuos_ej^2)
+print(var_residual)
+
+# Comprobación de propiedades de los residuos en R:
+mean(residuos_ej)                      # La media de los residuos es exactamente 0
+cor(residuos_ej, TAdias0)              # La correlación entre residuos y X es 0
+
+
+# ---- REGRESIÓN EXPONENCIAL Y OTRAS TRANSFORMACIONES NO LINEALES ----
+# Modelo Exponencial: Y = A * e^(B*X)  -->  log(Y) = ln(A) + B*X
+mod_exp <- lm(log(TAsist1) ~ edad)
+summary(mod_exp)
+
+# Predicción en escala original para modelo exponencial:
+pred_log <- predict(mod_exp, newdata = data.frame(edad = 50))
+pred_original <- exp(pred_log)         # Se aplica exp() para deshacer la transformación
+
+# Modelo Log-Log: log(Y) ~ log(X)
+mod_loglog <- lm(log(TAsist1) ~ log(TAsist0))
+summary(mod_loglog)
+
+
+# ---- EXTRACCIÓN DIRECTA DE P-VALORES ($p.value) PARA CUESTIONARIOS ----
+# Para obtener directamente la cifra exacta del p-valor:
+pval_chi     <- chisq.test(table(cl_tabac, es_hiper))$p.value
+pval_kruskal <- kruskal.test(edad ~ estudios)$p.value
+pval_shapiro <- shapiro.test(residuals(mod_ejemplo))$p.value
+
+
+# ---- REGRESIÓN DE X SOBRE Y Y COMPROBACIÓN DE R^2 = b_{y/x} * b_{x/y} ----
+mod_y_x <- lm(TAsist1 ~ TAsist0)      # Regresión de Y sobre X
+mod_x_y <- lm(TAsist0 ~ TAsist1)      # Regresión de X sobre Y
+
+b_yx <- coef(mod_y_x)["TAsist0"]
+b_xy <- coef(mod_x_y)["TAsist1"]
+
+# El producto de ambas pendientes da exactamente el R^2:
+r2_producto <- b_yx * b_xy
+r2_directo  <- summary(mod_y_x)$r.squared
