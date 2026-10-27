@@ -3,9 +3,9 @@
     "path": "C:/Users/TeRacksito/Downloads/rstudio_test/test.R",
     "project_path": "test.R",
     "type": "r_source",
-    "hash": "0",
+    "hash": "4074104543",
     "contents": "",
-    "dirty": true,
+    "dirty": false,
     "created": 1793086445283.0,
     "source_on_save": false,
     "relative_order": 1,
@@ -16,11 +16,11 @@
         "scrollLine": "14"
     },
     "folds": "",
-    "lastKnownWriteTime": 1793086793,
+    "lastKnownWriteTime": 1793091011,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1793090086190,
+    "last_content_update": 1793091011113,
     "read_only": false,
     "read_only_alternatives": []
 }
