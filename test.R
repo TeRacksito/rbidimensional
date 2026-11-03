@@ -41,3 +41,17 @@ prop.table(table(pregunta11$es_hiper))["si"] * 100
 
 mod1 <- lm(TAsist1 ~ log(edad))
 summary(mod1)$coefficients["(Intercept)", "Estimate"]
+
+mod2 <- lm(TAdias1 ~ TAdias0)
+summary(mod2)
+mean(residuals(mod2)^2)
+
+chisq.test(table(cl_tabac, es_hiper)) # > 0.05 -> independientes
+
+mod3 <- lm(peso ~ talla)
+predict(mod3, newdata = data.frame(talla=175))
+
+mod4 <- lm(TAsist1 ~ TAsist0)
+shapiro.test(residuals(mod4)) # > 0.05 -> son normales
+
+kruskal.test(edad ~ estudios) # < 0.05 -> muy significativo o dependientes (> 0.05 -> independientes)
