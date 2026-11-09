@@ -1,0 +1,583 @@
+---
+title: "Práctica 4: Estadística Descriptiva Unidimensional (Repaso)"
+subtitle: "Grado en Ingeniería Informática"
+author: "Isabel Fuentes Santos y Carmen Elvira Ramos Domínguez"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    toc: true                # Activa la tabla de contenidos
+    toc_depth: 5             # Niveles H1 a H5
+    toc_float:
+      collapsed: false       # Muestra el índice desplegado
+      smooth_scroll: true    # Desplazamiento suave
+    number_sections: true    # Numera secciones (1, 1.1, etc.)
+    fig_caption: true
+    theme: flatly            # Tema visual
+    highlight: tango         # Resaltado de código
+    code_folding: show       # Muestra/oculta código
+    lang: es                 # idioma
+---
+
+```{=html}
+<style>
+/* Captions de figuras (ggplot y R base) */
+.figure .caption, 
+figcaption, 
+p.caption {
+  font-weight: bold !important;  /* Aplica negrita */
+  font-size: 1.25em !important;  /* Aumenta el tamaño del texto */
+  color: #333333 !important;     /* Color del texto */
+  text-align: center !important; /* Centra el texto */
+}
+
+/* Captions de tablas (por si también quieres darles el mismo formato) */
+caption {
+  font-weight: bold !important;
+  font-size: 1.25em !important;
+  color: #333333 !important;
+  text-align: center !important;
+}
+
+table, table.table, .main-container table {
+  border-collapse: collapse!important;
+  width: auto !important;
+  margin-left: auto !important;       /* Centrado horizontal */
+  margin-right: auto !important;      /* Centrado horizontal */
+  margin-bottom: 1rem !important;
+  font-size: 0.85em !important; /* Reduce el tamaño del texto */
+  border: 1px solid #dddddd !important; /* Borde exterior de la tabla */
+}
+
+table th, table td,
+.main-container table th, .main-container table td {
+  border: 1px solid #dddddd!important;
+  text-align: center!important;
+  padding: 8px !important;;
+}
+
+tr:nth-child(even) {
+  background-color: #E8DAEF; /* Filas alternas en morado claro */
+}
+
+th {
+  background-color: #5C068C !important;; /* Color de cabecera */
+  color: white !important;;
+}
+</style>
+```
+
+```{r setup, include=FALSE}
+# Configuración global de los bloques de código (knitr)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 8,
+  fig.height = 5,
+  fig.align = "center"
+)
+
+# PAQUETES DE EDICIÓN
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(graphics)
+
+# PAQUETES ESTADÍSTICA
+
+library(DescTools)
+
+```
+
+## Introducción y Objetivos
+
+En esta práctica realizaremos un **Análisis Exploratorio de Datos (AED)** completo sobre un conjunto de datos del ámbito de la **Ingeniería Informática**.
+
+Se tratarán los siguientes puntos:
+
+- Organización y presentación de datos mediante **tablas de frecuencias** para una variable continua.
+
+- **Representación gráfica** de una distribución continua unidimensional usando R básico: `graphics`, y `DescTools`.
+
+- Cálculo de **medidas descriptivas de**:
+
+  - Centralización (media, mediana), y moda
+  - Posición (cuantiles/percentiles),
+  - Dispersión (varianza, desviación típica, rango, rango intercuartílico IQR, coeficiente de variación de Pearson)
+  - Forma (asimetría, y curtosis).
+
+## Conjunto de Datos
+
+En el ámbito de la infraestructura informática y la administración de sistemas, el seguimiento de variables continuas es fundamental para garantizar el correcto funcionamiento del hardware y prevenir fallos críticos. En este documento se analiza la **temperatura de un servidor (medido en ºC).**
+
+A continuación se recogen 50 registros de temperatura obtenidos al medir en intervalos regulares de tiempo un servidor con determinadas carga de trabajo:
+
+```{r}
+# Muestra de datos
+datos<-c(32.5, 34, 36.2, 38.1, 41.0, 42.3, 44.5, 45.0, 47.8, 49.2, 50.1, 51.5, 52.0, 53.4, 54.2, 55.0, 56.8, 57.3, 58.0, 59.5, 60.2, 61.0, 62.5, 63.1, 64.0, 64.8, 65.5, 66.2, 67.0, 68.4, 70.0, 71.2, 72.5, 73.8, 75.0, 76.4, 78.0, 80.5, 82.1, 83.4, 85.0, 87.2, 88.5, 90.1, 91.5, 93.0, 94.2, 95.8, 97.0, 98.5)
+
+# vemos el tipo de variable que hemos generado.
+
+
+str(datos)
+datos<-as.numeric(datos) # Declaración de la variable como numérica (no sería necesario en este caso)
+```
+
+Veamos como realizar un análisis exploratorio de datos o análisis descriptivo de la variable temperatura del servidor.
+
+## Análisis Estadístico Descriptivo
+
+### Tabla de frecuencia
+
+Las **Tablas de Frecuencias** nos permiten presentar los datos recogidos de la variable analizada, en este caso la temperatura, de forma ordenada, estructurada y resumida. En el caso de las variables continuas y discretas que toman un amplio abanico de valores debemos agrupar en clases o intervalos y hacer un recuento de las observaciones que caen dentro de cada clase. A continuación se presenta la estructura de la tabla de frecuencias (Tabla \@ref(tab:tabla-texto)) de una variable agrupada en intervalos:
+
+::: {align="center"}
+| $$Clases$$ | $$m_i$$ | $$n_i$$ | $$f_i$$ | $$N_i$$ | $$F_i$$ | $$\%_i$$ |
+|-----------|-----------|-----------|:---------:|-----------|-----------|-----------|
+| $$(a_0,a_1]$$ | $$m_1$$ | $$n_1$$ | $$f_1$$ | $$N_1$$ | $$F_1$$ | $$\%_1$$ |
+| $$(a_1,a_2]$$ | $$m_2$$ | $$n_2$$ | $$f_2$$ | $$N_2$$ | $$F_2$$ | $$\%_2$$ |
+| $$\vdots$$ | $$\vdots$$ | $$\vdots$$ | $$\vdots$$ | $$\vdots$$ | $$\vdots$$ | $$\vdots$$ |
+| $$(a_i-1,a_i]$$ | $$m_i$$ | $$n_i$$ | $$f_i$$ | $$N_i$$ | $$F_i$$ | $$\%_i$$ |
+| $$\vdots$$ | $$\vdots$$ | $$\vdots$$ | $$\vdots$$ | $$\vdots$$ | $$\vdots$$ | $$\vdots$$ |
+| $$(a_k-1,a_k]$$ | $$m_k$$ | $$n_k$$ | $$f_k$$ | $$N_k$$ | $$F_k$$ | $$\%_k$$ |
+| $$Total$$ |  | $$n$$ | $$1$$ |  |  | $$100\%$$ |
+
+: (#tab:tabla-texto) Distribución de Frecuencias de la Variable a Analizar
+:::
+
+donde
+
+- $m_i$ son los puntos medios de la clase $(a_{i-1}, a_{i}] ~~\forall i=1 \dots k$
+
+- $n_i$ son las frecuencias absolutas de la clase $(a_{i-1}, a_{i}] ~~\forall i=1 \dots k$
+
+- $f_i$ son las frecuencias relativas de la clase $(a_{i-1}, a_{i}] ~~\forall i=1 \dots k$
+
+- $N_i$ son las frecuencias absolutas acumuladas de la clase $(a_{i-1}, a_{i}] ~~\forall i=1 \dots k$
+
+- $F_i$ son las frecuencias relativas acumuladas de la clase $(a_{i-1}, a_{i}] ~~\forall i=1 \dots k$
+
+- $\%_i$ son los porcentajes de la clase $(a_{i-1}, a_{i}] ~~\forall i=1 \dots k$
+
+Por defecto la tabla se construye con intervalos de igual amplitud, pero si se dispone de información adicional los breaks o puntos de división entre las clases se pueden especificar teniendo en cuenta dicha información.
+
+```{r}
+# library(grDevices)
+min <-min(datos)
+max<-max(datos)
+
+k_raiz <- round(sqrt(length(datos)),0) # número de clases la raíz del nº de observaciones
+k_Sturges<- nclass.Sturges(datos) # número de clases según la fórmula de Sturges
+
+amplitud<- (max-min)/k_Sturges
+        
+breaks = seq(min,max,by=amplitud)
+
+# Usamos la función Freq de DescTools
+ 
+tab<-Freq(datos, breaks=breaks, include.lowest=TRUE) ## include.lowest=TRUE valor por defecto, intervalo inferior cerrado por la izquierda para incluir el mínimo.
+
+tab
+```
+
+Aunque la tabla elaborada por la función `Freq()` muestra los porcentajes y porcentajes acumulados, realmente calcula las frecuencias relativa y frecuencias relativas acumuladas, como podemos ver a continuación.
+
+```{r}
+tab[,3] 
+tab[,5]
+```
+
+Vamos a editar el formato de la tabla para que la muestre en la forma indicada en Tabla \@ref(tab:tabla-texto).
+
+```{r, tabla-frecuencias}
+
+# cálculo de Puntos Medios (Marcas de Clase) a partir de tus 'breaks'
+
+mid_points <- round((breaks[-length(breaks)] + breaks[-1]) / 2, 3) # Vector con los puntos de corte menos el último(inferiores) + vector con los puntos de corte menos el primero (supriores)
+
+# 2. Reconstrucción de la tabla incorporando los Puntos Medios (mi) y el porcentaje
+
+tab_completa <- cbind(
+  tab[, 1],     # Intervalos / Temperatura Primera columna
+  mid_points,   # Punto Medio (mi)
+  tab[, 2:5],   # ni, fi, Ni, Fi Columnas de la 2 a la 5
+  paste0(round(100 * tab[, 3], 3), "%") # Porcentaje %i
+)
+
+colnames(tab_completa) = c("Temperatura del Procesador",
+  "Marca de Clase (mi)",
+  "Frec. Absoluta (ni)",
+  "Frec. Relativa (fi)",
+  "Frec. Absoluta Acumulada (Ni)",
+  "Frec. Relativa Acumulada (Fi)",
+  "Porcentaje (%i)")
+
+# Presentación elegante con kableExtra
+#Tabla_Frec = tab
+tab_completa %>%
+  kbl(
+    caption= "Distribución de Frecuencias de la Temperatura del Servidor",
+    align = c("c", "c","c", "c","c", "c", "c"),
+    row.names = FALSE # Desactiva los nombres de fila numéricos automáticos
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#5C068C", color = "white") 
+
+```
+
+#### Interpretación de los resultados
+
+Como se puede apreciar en la Tabla \@ref(tab:tabla-frecuencias) la temperatura del servidor que más se presenta en los instantes de tiempo analizados oscila entre 51,4 y 70,2. De hecho, un 52% = 12% + 20% + 20%. se mantienen dentro de un rango de temperatura que se puede considerar óptimo (41.9, 70,02]. Sin embargo, hay un 26% = 12% + 14% en las dos últimas clases, en los que la temperatura está por encima de la temperatura 79.6 ºC, lo que señala una alta carga de trabajo o fallos en la refrigeración del servidor. Esto es indicativo de que se requiere de una revisión de la configuración de alertas en la infraestructura del servidor.
+
+### Representaciones Gráficas
+
+Los gráficos son herramientas fundamentales para representar visualmente la información procedente de la observación de una variable, en especial si es continua. A continuación se presentan los más utilizados:
+
+#### **Histograma y Polígonos de Frecuencia**
+
+El **histograma** es un conjunto de rectángulos cuyas bases son las amplitudes de las clases y las alturas $h_i$ son de tal forma que el área del rectángulo representa la frecuencia absoluta $n_i$ o relativa $f_i$ de la clase. No obstante, en R como construye con intervalos e igual amplitud suele representar en el eje de ordenadas directamente las frecuencias absolutas $n_i$, aunque también ofrece la alternativa de presentarlo con la "density", esto es, $h_i=\frac{f_i}{c_i}$, siendo $c_i$ la amplitud del intervalo.
+
+Por otra parte, el **polígono de frecuencias** se obtiene al unir los puntos medios de las barras superiores de los rectángulos y como norma se une el primer punto medio con el extremo inferior de la primera clase y el último punto medio con el extremo superior de la última clase.
+
+```{r, histograma, fig.cap="Histograma de la Temperatura del servidor con el Polígono de Frecuencias"}
+# Representación del Histograma
+h <- hist(datos, breaks = breaks, freq = FALSE,  col = "#C39BD3", xaxt = "n",  xlab = "Temperatura del Procesador", ylab = "Alturas (fi/ci)", main = "Histograma")
+
+
+# 2. Construir los puntos de origen y final en cero para cerrar el polígono
+x <- c(min(h$breaks), h$mids, max(h$breaks))
+y <- c(0, h$density, 0)
+
+# 3. Superponer la línea del polígono de frecuencias
+lines(x, y, col = "#5C068C", lwd = 2, type = "b", pch = 19)
+axis(side = 1, at = round(breaks,2))
+```
+
+En la Figura \@ref(fig:histograma) se recoge el histograma de la temperatura del servidor con el polígono de frecuencias superpuesto. Al igual que en la tabla de frecuencias se aprecia que hay dos intervalos donde se concentra el mayor número de instantes analizados y en los que la temperatura del servidor se mantiene en unos márgenes adecuados 51.36 y 70.21. Mientras que un grupo de instantes de tiempo considerable, más concretamente en el 14% de los instantes, dato extraído de la Tabla \@ref(tab:tabla-frecuencias), la temperatura superó los 89.07ºC.
+
+#### **Diagrama de Caja y Patillas**
+
+El **gráfico de Caja y Patillas** consiste en un rectángulo o caja construido apartir de los cuartiles inferior y superior, en cuyo interior se representa la mediana, y dos brazos o bigotes construidos a partir de los valores máximo y mínimo, o a partir de sumar y restar a dichos cuartiles 1.5 veces el rango intercuartílico. Si la distribución tiene valores atípicos, éstos se representan mediante círculos y/o asteriscos. Dicha representación sirve para analizar la variabilidad de los datos, la simetría de la distribución, y la detección de ouliers o valores extremos.
+
+Antes de representarlo veamos primero un resumen de las medidas de posición con la función `summary()`.
+
+```{r}
+summary(datos)
+```
+
+```{r, caja-patilla, fig.cap="Diagrama de Caja y Patillas de la Tempertura del Servidor"}
+
+boxplot(datos, col="#C39BD3", range=1.5, ylab="Temperatura del Servidor", main="Diagrama de Caja y Patilla")
+```
+
+De la Figura \@ref(fig:caja-patilla) y del resultado de `summary()` se desprende que en el 50% de los instantes de tiempo analizados, la temperatura del servidor estuvo entre 52.35 y 79.88, márgenes apropiados para el buen funcionamiento del servidor. No obstante, hay que señalar que en un 25% de instantes de tiempo se superó la temperatura de 79.88 ºC. Lo que es indicativo de que la configuración de alertas de la infraestructura no está funcionando adecuadamente y se debería revisar.
+
+Por otra parte, puesto que la mediana está más próxima al primer que al tercer cuartil, esto es indicatorio de que la distribución de frecuencias de la temperatura presenta una asimetría a la derecha o positiva.
+
+No hay valores extremos u outliers, ya que el gráfico no tiene ni circulos ni asteriscos. En caso de que la variable los tuviese podríamos saber su valor con la función `Outlier()` de la librería `DescTools`.
+
+```{r}
+Outlier(datos, method = c("boxplot", "hampel"), value = TRUE,na.rm = TRUE)
+```
+
+#### **Polígono de Frecuencias Acumulado**
+
+El **polígono de frecuencias acumulado** se construye sobre los extremos superiores de los intervalos, representando sobre el eje de ordenadas las fecuencias absolutas o relativas acumuladas.
+
+```{r, pacumulado, fig.cap="Polígono de Frecuencias de la Tempertura del Servidor"}
+
+x<-breaks
+y<-c(0, cumsum(h$counts))
+plot(x, y, type = "b", xaxt = "n", yaxt = "n", pch = 19, col="#C39BD3", lwd= 2, main= "Polígono de Frecuencias Acumuladas", xlab="Clases",ylab = "Frecuencia Absolutas Acumuladas")
+axis(side = 1, at = round(breaks,2))
+axis(side = 2, at = y)
+```
+
+Como se puede apreciar en la Figura \@ref(fig:pacumulado) en 37 instantes de tiempo del total de 50, la temperatura del servidor fue inferior o igual a 79,64 ºC. Mientras que en 7 instantes, la temperatura fue superior a 89,07 ºC. En tales instantes, el sistema de alerta debería haber señalado una posible caída del servidor debido a algún mal funcionamiento.
+
+### Medidas Descriptivas
+
+Veamos una serie de medidas descriptivas que describen de forma global el conjunto de datos. Se distinguen cuatro tipos de medidas:
+
+#### Medidas de Tendencia Central
+
+- Para el cálculo de la **media aritmética** cuando la variable está agrupada en clases o intervalos, utilizamos la siguente expresión:
+
+  $$\bar{x} = \displaystyle \frac{\sum_{i=1}^{k}{m_{i}n_{i}}}{n} = \sum_{i=1}^{k}{m_{i}f_{i}}$$
+
+  donde $m_i$ es la marca de clase de la i-ésima clase y $n_i$ el número de valores en esa clase. Para ello debemos usar en R la función `weighted.mean().` No obstante, R calcula la media de los $n$ valores directamente sin agrupar, que es una medida más precisa y no pierde información:
+
+  $$\bar{x}=\frac{\sum_{i ^1}^n x_i}{n}$$
+
+  mediante la función `mean()`.
+
+- La **mediana**, que es el valor que deja al menos la mitad de las observaciones inferiores a ella y la otra mitad superiores.
+
+- Se añade la **moda**, valor de mayor frecuencia, aunque no siempre es una medida de centralización.
+
+```{r, tend-central}
+# Medidas de Tendencia Central
+
+w.media = weighted.mean(h$mids,tab[,3])
+media   <- mean(datos, na.rm = TRUE)
+mediana <- median(datos, na.rm = TRUE)
+moda <- Mode(datos, na.rm = TRUE) 
+
+# Construcción del Data Frame Unificado
+Tabla_Descriptivos1 <- data.frame(
+  "Media_agrupada"=w.media,
+  "Media" = media,
+  "Mediana" = mediana,
+  "Moda" = moda
+)
+
+# Renderizado de Tabla de Medidas Centrales
+Tabla_Descriptivos1 %>%
+  kbl(
+    caption = "Medidas de Centralización",
+    align = c("c", "c","c",  "c"),
+    digits = 3
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#5C068C",color = "white")
+
+```
+
+- El conjunto de datos no presentan valores missing, además se eliminan con el parámetro o argumento `na.rm=TRUE`. Sin embargo, la función `Mode()` de `DescTools` no es capaz de calcularla. ¿A qué puede deberse?
+
+  **Método alternativo:** Podemos usar la función `mlv()` de la libreria `modeest`.
+
+```{r,tend-central-comp}
+
+library(modeest)
+ mode2 = mlv(datos)
+Tabla_Descriptivos1$Moda_mlv = mode2
+ 
+ Tabla_Descriptivos1 %>%
+  kbl(
+    caption = "Medidas de Centralización Ampliadas",
+    align = c("c", "c", "c","c", "c"),
+    digits = 3
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#5C068C",color = "white")
+
+ 
+ 
+
+```
+
+Como vemos la moda es menor que la mediana que a su vez es menor que la media, lo que indica que la distribución de frecuencias presenta una asimetría a la derecha, aspecto que ya se detectó con el gráfico de caja y patillas.
+
+#### Medidas de Dispersión
+
+- Dada una muestra de $n$ observaciones $(x_1, x_2, \dots, x_n)$ con media muestral $\bar{x}$, la varianza muestral se define como:
+
+  $$\displaystyle S_n^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \bar{x})^2$$
+
+  Sin embargo, la función `var()` **no calcula la varianza muestral (**$S_n^2$), sino la **cuasivarianza muestral (**$S^2$), es decir:
+
+  $$\displaystyle S^2 = \frac{1}{n - 1} \sum_{i=1}^{n} (x_i - \bar{x})^2 = \frac{n}{n - 1} S_n^2$$
+
+  El motivo de esto se debe a que la cuasivarianza es mejor estimador de la varianza poblacional que la varianza muestral.
+
+- El **Coeficiente de Variación de Pearson (CV)** se define como el cociente entre la desviación típica ($S_n$) y el valor absoluto de la media muestral ($\bar{x}$):
+
+  $$\displaystyle CV = \frac{S_n}{\vert{}\bar{x}\vert{}}$$
+
+  El **CV** permite medir la **representatividad de la media:** A menor valor del $CV$, menor es la variabilidad relativa y la media muestral resulta más representativa del conjunto de datos.
+
+  **Interpretación**
+
+  - $CV \le 0.30$ ($30\%$): la media es un buen indicador del comportamiento de la muestra.
+
+  - $CV > 0.30$ ($30\%$): Elevada dispersión; la media pierde representatividad y es aconsejable complementar el análisis con la mediana u otros descriptores posicionales.
+
+- Otras medidas de dispersión son:
+
+  - **Rango:** $rango = max(x) - min(x)$
+
+  - **Rango intercuartílico:** $IQR = Q_3 -Q_1$
+
+```{r, med-disp}
+
+n<-length(datos)
+
+# Medidas de Dispersión
+var_1 <- var(datos, na.rm = TRUE) # Cuasivarianza
+desv_std_1 <- sd(datos, na.rm = TRUE) # Cuasi-desviación típica
+var <- var_1*(n-1)/n # Varianza muestral
+desv_std <- sqrt(var) # Cuasi-desviación típica
+CV <- desv_std/abs(media)
+rango <- diff(range(datos), na.rm = TRUE)
+rango_iqr <- IQR(datos, na.rm = TRUE)
+
+# Construcción del Data Frame Unificado
+Tabla_Descriptivos2 <- data.frame(
+  "SD" = desv_std,
+  "Var" = var,
+  "CV" =CV,
+  "Rango" =rango,
+  "IQR" = rango_iqr
+)
+
+# Renderizado de Tabla de Medidas de Dispersión
+Tabla_Descriptivos2 %>%
+  kbl(
+    caption="Medidas de Dispersión",
+    align = c("c", "c", "c", "c", "c"),
+    row.names = FALSE,
+    digits = 3
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#5C068C",color = "white")
+
+```
+
+La media de 65.696 se considera una temperatura representativa de los datos, ya que, como se observa en las tablas anteriores \@ref(tab:tend-central-comp) y \@ref(tab:med-disp), la desviación estándar de 17.987 es inferior a 0.3 veces la media, es decir, menor que 19.7088. Además, el coeficiente de variación de Pearson, que es 0.274, también se encuentra por debajo del umbral de 0.3.
+
+#### Medidas de Posición
+
+Las medidas de posición son aquellas medidas que dividen el conjunto total de datos en un número determinado de grupos con igual número de observaciones:
+
+- **Cuartiles** tres valores que dividen el conjunto total de datos en 4 grupos con un 25% de observaciones cada uno.
+
+- **Deciles** 9 valores que dividen el conjunto total de datos en 10 grupos con un 10% de observaciones cada uno.
+
+- **Percentiles** 99 valores que dividen el conjunto total de datos en 100 grupos con un 1% de observaciones cada uno.
+
+```{r, cuartiles}
+#Cuartiles
+cuartiles <- quantile(datos, seq(0.25, 0.75, by = 0.25), na.rm = TRUE)
+
+as.data.frame(t(cuartiles)) %>%
+  kbl(
+    caption="Cuartiles (Q1, Q2, Q3)",
+    align = "c",
+    row.names = FALSE,
+    digits = 3
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#5C068C", color = "white")
+```
+
+- Se adjunta de nuevo el boxplot para apreciarlas gráficamente.
+
+```{r, echo = FALSE}
+  boxplot(datos, col="#C39BD3", range=1.5, ylab="Temperatura del Servidor", main=" ")
+```
+
+```{r, deciles}
+# Deciles
+deciles <- quantile(datos, seq(0.1, 0.9, by = 0.1), na.rm = TRUE)
+
+as.data.frame(t(deciles)) %>%
+  kbl(
+    caption="Deciles (D1 a D9)",
+    align = "c",
+    digits = 3
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#5C068C", color = "white")
+
+```
+
+```{r, percentiles}
+# Percentiles Específicos
+percentiles <- quantile(datos, c(0.05, 0.90, 0.95), na.rm = TRUE)
+
+as.data.frame(t(percentiles)) %>%
+  kbl(
+    caption="Percentiles Seleccionados (P5, P90, P95)",
+    align = "c",
+    digits = 3
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#5C068C", color = "white")
+```
+
+- De la Tabla \@ref(tab:percentiles), podemos ver que en un 5% de instantes de tiempo la temperatura del sevidor se mantuvo inferior a una temperatura de 37.055 ºC. Aunque destaca más que un 5% de instantes supero los 95.08 ºC.
+
+#### Medidas de Forma
+
+- Las medidas de forma analizan la **simetría** o **asimetría** de la distribución de frecuencias y el **apuntamiento** comparando la distribución de frecuencias de la variable temperatura respecto a la distribución Normal estándar de media 0 y desviación estándar 1.
+
+```{r, med-forma}
+# Medidas de Forma
+
+library(e1071) # la librería moments también permite calcularlas
+
+# Cálculo directo sobre la variable
+asimetria <- skewness(datos, na.rm = TRUE, type=3) # Coeficiente de asimetría de Fisher
+curtosis  <- kurtosis(datos, na.rm = TRUE, type=3) # Coeficiente de curtosis
+
+# Construcción del Data Frame Unificado
+Tabla_Descriptivos3 <- data.frame(
+  Asimetría = asimetria,
+  Curtosis = curtosis
+)
+
+# Renderizado de Tabla de Medidas de Forma
+Tabla_Descriptivos3 %>%
+  kbl(
+    caption="Medidas de Forma",
+    align = c("c", "c"),
+    digits = 3
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#5C068C",color = "white")
+```
+
+- Según el coeficiente de asimetría mostrado en la Tabla \@ref(tab:med-forma), que es positivo, y que concuerda con lo obtenido en el gráfico de caja y patilla, la distribución de frecuencias de la variable presenta una ligera asimetría a la derecha o positiva. En cuanto al apuntamiento, al ser el coeficiente de curtosis negativo indica que la gráfica es menos apuntada que la normal estándar.
+
+```{r, echo=FALSE}
+# Representación del Histograma
+h <- hist(datos, breaks = breaks, freq = FALSE, xlim=c(11,121), col = "#C39BD3",  xaxt = "n", xlab = "Temperatura del Procesador", ylab = "Alturas (fi/ci)", main = "Histograma")
+
+
+#Para superponer la normal
+# 2. Calcular la media y desviación estándar
+ media <- mean(datos, na.rm = TRUE)
+ desv  <- sd(datos, na.rm = TRUE)
+
+# 3. Superponer la curva normal
+  curve(dnorm(x, mean = media, sd = desv), 
+      col = "#5C068C", 
+      lwd = 3, 
+      add = TRUE)
+  
+axis(side = 1, at = seq(11,121, by=11))
+```
